@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Flow - AI-powered Intelligent Traffic Management System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/traffic_styles.css" />
+  </head>
+  <body>
+    <!-- Decorative background elements -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+    
+    <div class="app-container glass-panel main-panel">
+      <header class="app-header">
+        <h1>Smart Flow - AI-powered Intelligent Traffic Management System</h1>
+        <p>Intelligent, dynamic 4-way intersection simulator</p>
+      </header>
+
+      <main class="app-grid">
+        <!-- City Map -->
+        <section class="city-map-section glass-panel inner-panel">
+          <div class="section-header">
+            <h2>City Overview</h2>
+            <div class="map-controls">
+              <label for="map-count">Intersections</label>
+              <select id="map-count" class="glass-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15" selected>15 (All)</option>
+              </select>
+              <button id="btn-apply-map" class="btn btn-secondary btn-small">Apply</button>
+            </div>
+          </div>
+          <div id="city-map-canvas" class="city-map-canvas">
+            <svg class="city-map-svg" viewBox="0 0 700 400" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="river-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="rgba(14, 165, 233, 0.4)"/>
+                  <stop offset="100%" stop-color="rgba(125, 211, 252, 0.2)"/>
+                </linearGradient>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+              </defs>
+              <path class="map-river" d="M 0 50 Q 60 90 40 180 T 80 280 T 50 360 L 160 360 L 160 0 Z" fill="url(#river-grad)"/>
+              <ellipse class="map-park" cx="520" cy="90" rx="85" ry="55" fill="rgba(74, 222, 128, 0.15)"/>
+              <ellipse class="map-park" cx="380" cy="200" rx="60" ry="70" fill="rgba(74, 222, 128, 0.15)"/>
+              <path class="map-park" d="M 280 320 Q 320 280 380 310 Q 340 360 280 340 Z" fill="rgba(74, 222, 128, 0.15)"/>
+              <path class="map-park" d="M 580 280 Q 620 240 660 280 Q 640 320 600 310 Z" fill="rgba(134, 239, 172, 0.15)"/>
+              <g class="map-roads" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 0 85 C 120 65 280 100 350 85 C 420 70 580 95 700 85"/>
+                <path d="M 0 200 C 180 235 320 165 350 200 C 380 235 520 165 700 200"/>
+                <path d="M 0 315 C 150 285 350 345 500 315 C 580 300 650 330 700 315"/>
+                <path d="M 120 0 C 85 90 155 220 120 280 C 85 340 130 400 120 400"/>
+                <path d="M 350 0 C 395 120 305 260 350 400"/>
+                <path d="M 580 0 C 615 100 545 240 580 400"/>
+                <path d="M 230 0 C 200 150 260 280 230 400" stroke="rgba(255, 255, 255, 0.05)" stroke-width="2"/>
+                <path d="M 480 0 C 510 180 450 320 480 400" stroke="rgba(255, 255, 255, 0.05)" stroke-width="2"/>
+              </g>
+              <!-- Map nodes rendered via JS -->
+              <g id="map-intersection-nodes"></g>
+            </svg>
+          </div>
+          <div class="map-footer">
+            <span class="map-hint">Click a node to select intersection</span>
+            <div id="selected-intersection-label" class="selected-intersection-label">
+              Target: <strong class="text-neon-blue">—</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Intersection View -->
+        <section class="intersection-section glass-panel inner-panel">
+          <div class="section-header">
+            <h2>Detailed View <span id="intersection-view-title" class="text-neon-purple">(I1)</span></h2>
+            <div class="intersection-selector">
+              <select id="intersection-select" class="glass-select"></select>
+            </div>
+          </div>
+          
+          <div class="intersection-wrapper">
+            <div class="intersection">
+              <!-- North -->
+              <div class="lane lane-north">
+                <div class="signal-housing" id="signal-north">
+                  <div class="light red"></div>
+                  <div class="light yellow"></div>
+                  <div class="light green"></div>
+                </div>
+                <div class="lane-info">
+                  <div class="lane-label">North</div>
+                  <div class="timer" id="timer-north">0s</div>
+                  <div class="vehicle-count" id="vehicles-north">0</div>
+                </div>
+                <div class="vehicle-stream" id="stream-north"></div>
+              </div>
+
+              <!-- West -->
+              <div class="lane lane-west">
+                <div class="signal-housing horizontal" id="signal-west">
+                  <div class="light red"></div>
+                  <div class="light yellow"></div>
+                  <div class="light green"></div>
+                </div>
+                <div class="lane-info">
+                  <div class="lane-label">West</div>
+                  <div class="timer" id="timer-west">0s</div>
+                  <div class="vehicle-count" id="vehicles-west">0</div>
+                </div>
+                <div class="vehicle-stream" id="stream-west"></div>
+              </div>
+
+              <!-- Center -->
+              <div class="center-box glass-panel inner-panel solid">
+                <span id="center-status">Awaiting Data...</span>
+              </div>
+
+              <!-- East -->
+              <div class="lane lane-east">
+                <div class="signal-housing horizontal" id="signal-east">
+                  <div class="light red"></div>
+                  <div class="light yellow"></div>
+                  <div class="light green"></div>
+                </div>
+                <div class="lane-info">
+                  <div class="lane-label">East</div>
+                  <div class="timer" id="timer-east">0s</div>
+                  <div class="vehicle-count" id="vehicles-east">0</div>
+                </div>
+                <div class="vehicle-stream" id="stream-east"></div>
+              </div>
+
+              <!-- South -->
+              <div class="lane lane-south">
+                <div class="signal-housing" id="signal-south">
+                  <div class="light red"></div>
+                  <div class="light yellow"></div>
+                  <div class="light green"></div>
+                </div>
+                <div class="lane-info">
+                  <div class="lane-label">South</div>
+                  <div class="timer" id="timer-south">0s</div>
+                  <div class="vehicle-count" id="vehicles-south">0</div>
+                </div>
+                <div class="vehicle-stream" id="stream-south"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Column: Controls and Dashboard -->
+        <div class="right-col-wrapper">
+          
+          <!-- Controls -->
+          <section class="controls-section glass-panel inner-panel">
+            <h2>Traffic Control</h2>
+            <div class="input-grid">
+              <div class="input-group">
+                <label>North</label>
+                <input type="number" id="input-north" min="0" value="0" class="glass-input" />
+              </div>
+              <div class="input-group">
+                <label>South</label>
+                <input type="number" id="input-south" min="0" value="0" class="glass-input" />
+              </div>
+              <div class="input-group">
+                <label>East</label>
+                <input type="number" id="input-east" min="0" value="0" class="glass-input" />
+              </div>
+              <div class="input-group">
+                <label>West</label>
+                <input type="number" id="input-west" min="0" value="0" class="glass-input" />
+              </div>
+            </div>
+            
+            <div class="action-buttons">
+              <button id="btn-calculate" class="btn btn-primary btn-glow">Update Traffic</button>
+              <button id="btn-stop" class="btn btn-warning">Stop</button>
+              <button id="btn-reset" class="btn btn-danger">Reset</button>
+            </div>
+
+            <div class="emergency-controls glass-panel inner-panel">
+              <h3>🚨 Emergency Override</h3>
+              <div class="emergency-row">
+                <select id="emergency-direction" class="glass-select">
+                  <option value="north">North Lane</option>
+                  <option value="south">South Lane</option>
+                  <option value="east">East Lane</option>
+                  <option value="west">West Lane</option>
+                </select>
+                <div class="emergency-actions">
+                  <button id="btn-emergency-on" class="btn btn-emergency">Activate</button>
+                  <button id="btn-emergency-off" class="btn btn-secondary">Clear</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Video Processing Panel -->
+            <div class="ai-video-controls glass-panel inner-panel" style="margin-top: 15px;">
+              <h3>🎥 AI Video Processing</h3>
+              <p style="font-size: 0.85rem; color: rgba(255,255,255,0.7); margin-bottom: 10px;">Select videos for each direction to detect traffic, sudden stops, and accidents.</p>
+              <div class="input-grid" style="grid-template-columns: 1fr;">
+                <div class="input-group" style="margin-bottom: 8px;">
+                  <label>North Video</label>
+                  <input type="file" id="video-north" accept="video/mp4,video/x-m4v,video/*" class="glass-input" />
+                </div>
+                <div class="input-group" style="margin-bottom: 8px;">
+                  <label>South Video</label>
+                  <input type="file" id="video-south" accept="video/mp4,video/x-m4v,video/*" class="glass-input" />
+                </div>
+                <div class="input-group" style="margin-bottom: 8px;">
+                  <label>East Video</label>
+                  <input type="file" id="video-east" accept="video/mp4,video/x-m4v,video/*" class="glass-input" />
+                </div>
+                <div class="input-group" style="margin-bottom: 8px;">
+                  <label>West Video</label>
+                  <input type="file" id="video-west" accept="video/mp4,video/x-m4v,video/*" class="glass-input" />
+                </div>
+              </div>
+              <div class="action-buttons" style="margin-top: 10px;">
+                <button id="btn-process-video" class="btn btn-primary btn-glow" style="width: 100%;">Process AI Videos</button>
+              </div>
+              <div id="ai-processing-status" style="margin-top: 10px; font-size: 0.9rem; color: #38bdf8; text-align: center; display: none;">
+                Analyzing videos... Please wait.
+              </div>
+            </div>
+          </section>
+
+          <!-- Dashboard -->
+          <section class="dashboard-section glass-panel inner-panel">
+            <h2>Live Telemetry</h2>
+            <div class="dashboard-grid">
+              <div class="dash-card">
+                <div class="dash-icon load"></div>
+                <div class="dash-content">
+                  <h3>Traffic Load</h3>
+                  <div class="grid-2col">
+                    <span>N: <b id="summary-north">0</b></span>
+                    <span>S: <b id="summary-south">0</b></span>
+                    <span>E: <b id="summary-east">0</b></span>
+                    <span>W: <b id="summary-west">0</b></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dash-card">
+                <div class="dash-icon time"></div>
+                <div class="dash-content">
+                  <h3>Phase Time (s)</h3>
+                  <div class="grid-2col">
+                    <span>N: <b id="green-north" class="text-neon-green">0</b></span>
+                    <span>S: <b id="green-south" class="text-neon-green">0</b></span>
+                    <span>E: <b id="green-east" class="text-neon-green">0</b></span>
+                    <span>W: <b id="green-west" class="text-neon-green">0</b></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dash-card full-width">
+                <div class="dash-status-row">
+                  <div class="status-item">
+                    <span class="label">Priority Lane</span>
+                    <strong id="dashboard-active" class="text-neon-blue">—</strong>
+                  </div>
+                  <div class="status-item">
+                    <span class="label">Time Left</span>
+                    <strong id="dashboard-timer" class="text-neon-purple">0s</strong>
+                  </div>
+                  <div class="status-item">
+                    <span class="label">Congestion</span>
+                    <strong id="congestion-indicator" class="congestion-low">Low</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Traffic Police Dashboard -->
+          <section class="police-dashboard glass-panel inner-panel" id="police-dashboard">
+            <h2 class="police-dashboard-title">Traffic Police Dashboard</h2>
+            
+            <div class="police-grid">
+              <!-- Live congestion map -->
+              <div class="police-card full-width">
+                <h3>Live congestion map</h3>
+                <div id="congestion-map" class="congestion-map"></div>
+              </div>
+
+              <!-- Accident alerts -->
+              <div class="police-card">
+                <h3>Accident alerts</h3>
+                <div id="accident-alerts" class="accident-alerts"></div>
+                <div class="accident-report glass-panel inner-panel solid">
+                  <h4>Report accident</h4>
+                  <div class="accident-form">
+                    <select id="accident-intersection" class="glass-select"></select>
+                    <select id="accident-severity" class="glass-select">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                    <button id="btn-report-accident" class="btn btn-danger btn-small">Report</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehicle density heatmap -->
+              <div class="police-card">
+                <h3>Vehicle density heatmap</h3>
+                <div id="density-heatmap" class="density-heatmap"></div>
+              </div>
+
+              <!-- Average vehicle speed -->
+              <div class="police-card">
+                <h3>Average vehicle speed</h3>
+                <div class="speed-display">
+                  <div class="city-speed">
+                    <span class="label">City average</span>
+                    <strong id="city-average-speed" class="text-neon-green">— km/h</strong>
+                  </div>
+                  <div id="speed-by-intersection" class="speed-by-intersection"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </main>
+      
+      <footer>
+        <small>&copy; 2026 AI Traffic Control. In-memory Simulator.</small>
+      </footer>
+    </div>
+
+    <script src="/static/traffic_dashboard.js"></script>
+  </body>
+</html>
