@@ -1,0 +1,20 @@
+# Smart Flow – Custom Dataset Configuration
+# ==========================================
+# This file tells YOLOv8 where your dataset is and what classes to detect.
+# Edit the class names below to match YOUR dataset's labels.
+
+path: ../dataset          # Path to dataset root (relative to this file location)
+train: images/train       # Training images folder
+val: images/val           # Validation images folder
+
+# Number of classes
+nc: 6
+
+# Class names — Edit these to match your dataset's label names exactly
+names:
+  0: car
+  1: motorcycle
+  2: bus
+  3: truck
+  4: ambulance
+  5: pedestrian

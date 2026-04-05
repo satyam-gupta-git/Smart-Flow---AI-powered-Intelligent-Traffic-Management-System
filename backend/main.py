@@ -13,8 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-
-from .ai_processing import process_video
+from .ai_processing import process_video, detect_emergency_vehicle
+from .anpr import challans
 
 from .traffic_logic import (
     Direction,
@@ -240,8 +240,8 @@ def _recompute_all_green_times_with_neighbors() -> None:
             t_state.active_direction = "north"
         new_green = t_state.green_times[t_state.active_direction]
         if t_state.yellow_remaining == 0:
-            # Only shorten current green if new max is lower; never extend
-            t_state.remaining_time = min(t_state.remaining_time, new_green)
+            # Dynamically adjust current green to accommodate the new traffic count
+            t_state.remaining_time = new_green
 
 
 async def signal_cycle_loop() -> None:
@@ -258,6 +258,18 @@ async def signal_cycle_loop() -> None:
             e_state = emergencies[iid]
 
             if e_state.active and e_state.direction:
+                if e_state.timeout is not None:
+                    if e_state.timeout > 0:
+                        e_state.timeout -= 1
+                    else:
+                        print("Emergency cleared")
+                        deactivate_emergency(e_state)
+                        if t_state.active_direction not in t_state.green_times:
+                            t_state.active_direction = "north"
+                        t_state.remaining_time = t_state.green_times[t_state.active_direction]
+                        t_state.yellow_remaining = 0
+                        continue
+
                 if t_state.remaining_time > 0:
                     t_state.remaining_time -= 1
                 t_state.yellow_remaining = 0
@@ -353,6 +365,11 @@ async def signal_status() -> Dict:
     return _build_full_state()
 
 
+@app.get("/challans")
+async def list_challans() -> Dict:
+    return {"status": "ok", "challans": challans}
+
+
 @app.post("/accidents")
 async def report_accident(body: AccidentReport) -> Dict:
     """Report an accident for the police dashboard."""
@@ -417,7 +434,7 @@ async def process_videos(
                     shutil.copyfileobj(v.file, buffer)
                 
                 # Run AI logic
-                analysis = process_video(tmp_path)
+                analysis = process_video(tmp_path, intersection_id, d)
                 results[d] = analysis
                 
                 # Update vehicles
@@ -427,7 +444,7 @@ async def process_videos(
                 # Handle incident detection (sudden stop or collision)
                 if analysis.get("accident") or analysis.get("sudden_stop"):
                     # Activate emergency for this lane
-                    activate_emergency(e_state, d)
+                    activate_emergency(e_state, d, timeout=10)
                     t_state.active_direction = d
                     t_state.remaining_time = max(20, t_state.green_times.get(d, 30))
                     t_state.yellow_remaining = 0
@@ -445,6 +462,15 @@ async def process_videos(
                         "cleared": False,
                     }
                     accidents.append(accident)
+                else:
+                    # Also check for emergency vehicles (ambulance, fire truck)
+                    is_emerg = detect_emergency_vehicle(tmp_path)
+                    if is_emerg:
+                        print(f"Activating green corridor for {d}")
+                        activate_emergency(e_state, d, timeout=10)
+                        t_state.active_direction = d
+                        t_state.remaining_time = max(20, t_state.green_times.get(d, 30))
+                        t_state.yellow_remaining = 0
                     
         _recompute_all_green_times_with_neighbors()
         await _broadcast_state()
@@ -453,7 +479,6 @@ async def process_videos(
     finally:
         # Cleanup temporary files
         shutil.rmtree(temp_dir, ignore_errors=True)
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
